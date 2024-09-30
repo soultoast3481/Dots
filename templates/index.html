@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agar.io Clone</title>
+    <style>
+        canvas {
+            border: 1px solid black;
+            display: block;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.js"></script>
+    <script>
+        var canvas = document.getElementById('gameCanvas');
+        var ctx = canvas.getContext('2d');
+        var players = {};
+        var trails = {};
+
+        // Connect to the socket
+        var socket = io();
+
+        // Receive updates about players
+        socket.on('update_players', function(data) {
+            players = data;
+            draw();
+        });
+
+        // Receive updates about trails
+        socket.on('update_trails', function(data) {
+            trails = data;
+            draw();
+        });
+
+        function draw() {
+            // Clear the canvas before each frame
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw trails
+            for (var id in trails) {
+                if (trails.hasOwnProperty(id)) {
+                    var trail = trails[id];
+                    trail.forEach(function(t, index) {
+                        ctx.globalAlpha = 1.0 - (index / 4);  // Gradually fade out the trail
+                        ctx.beginPath();
+                        ctx.arc(t.x, t.y, 5, 0, 2 * Math.PI);  // Small circle for trail
+                        ctx.fillStyle = players[id] ? players[id].color : '#000';  // Use player's color or default to black
+                        ctx.fill();
+                    });
+                }
+            }
+
+            // Reset alpha back to 1
+            ctx.globalAlpha = 1.0;
+
+            // Draw the players
+            for (var id in players) {
+                if (players.hasOwnProperty(id)) {
+                    var player = players[id];
+                    ctx.beginPath();
+                    ctx.arc(player.x, player.y, 10, 0, 2 * Math.PI);
+                    ctx.fillStyle = player.color;
+                    ctx.fill();
+                }
+            }
+        }
+
+        // Handle player movement (for demonstration purposes)
+        document.addEventListener('mousemove', function(e) {
+            var rect = canvas.getBoundingClientRect();
+            var x = e.clientX - rect.left;
+            var y = e.clientY - rect.top;
+            socket.emit('move', { x: x, y: y });
+        });
+    </script>
+</body>
+</html>
